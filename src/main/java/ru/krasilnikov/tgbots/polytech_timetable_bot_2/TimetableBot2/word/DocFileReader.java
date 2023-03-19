@@ -34,11 +34,22 @@ public class DocFileReader {
 
         for (XWPFTable table : tableList){
             for(int i = 1; i < table.getRows().size(); i++){
-                if(table.getRow(i).getCell(0).getText().equals(groupId.toString())){
+                //разделение групп, если записано несколько в 1 ячейке (напр. 59, 60)
+                String groupStr = table.getRow(i).getCell(0).getText();
+                if(groupStr.contains(",")){
+                    for (String item:
+                         groupStr.split(",")) {
+                        if(item.equals(groupId.toString())){
+                            groupStr = item;
+                        }
+                    }
+                }
+                if(groupStr.equals(groupId.toString())){
 
                     String lesionRoom = table.getRow(i).getCell(4).getText();
                     if (lesionRoom.isEmpty())
                         lesionRoom = "- , - ";
+
                     String lesionNumber = table.getRow(i).getCell(1).getText();
                     String lesionName = table.getRow(i).getCell(3).getText() + ", " +
                             lesionRoom;
@@ -47,10 +58,11 @@ public class DocFileReader {
                         String[] someNumbers = lesionNumber.split(",");//это массив с уроками типа: 1,7-8
                         for (String item:
                              someNumbers) {
+                             item = item.trim();
                              if(item.contains("-")) {
                                  String[] numbers = item.split("-");
-                                 int startLesion = Integer.parseInt(numbers[0]);
-                                 int endLesion = Integer.parseInt(numbers[1]);
+                                 int startLesion = Integer.parseInt(numbers[0].trim());
+                                 int endLesion = Integer.parseInt(numbers[1].trim());
 
                                  for (int j = startLesion; j <= endLesion; j++) {
                                      timetableChanges.put(j, lesionName);
@@ -62,12 +74,18 @@ public class DocFileReader {
                     }
                     else if(lesionNumber.contains("-")){
                         String[] numbers = lesionNumber.split("-");
-                        int startLesion = Integer.parseInt(numbers[0]);
-                        int endLesion = Integer.parseInt(numbers[1]);
+                        int startLesion = Integer.parseInt(numbers[0].trim());
+                        int endLesion = Integer.parseInt(numbers[1].trim());
 
                         for(int j = startLesion; j <= endLesion; j ++) {
                             timetableChanges.put(j, lesionName);
                         }
+                    }
+                    else if(lesionNumber.equals("")){
+                        for(int j = 1; j <= 10; j++){
+                            timetableChanges.put(j, lesionName);
+                        }
+                        System.out.println("ПП");
                     }else{
                         timetableChanges.put(Integer.parseInt(lesionNumber), lesionName);
                     }
@@ -82,7 +100,7 @@ public class DocFileReader {
 
         List<XWPFParagraph> paragraphList = doc.getParagraphs();
 
-        String[] words = paragraphList.get(3).getText().split(" ");
+        String[] words = paragraphList.get(2).getText().split(" ");
         String[] dateS = words[6].split("\\.");
 
         int day = Integer.parseInt(dateS[0]);

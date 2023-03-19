@@ -31,19 +31,21 @@ public class TelegramBot extends TelegramLongPollingBot {
     String oldPath;//тут крч записывается старое расписание, и када новое приходит, он названия сравнивает
     @Autowired
     private UserRepository userRepository;
-    final static String SPECIAL_THANKS =
-            "Отдельная благодарность:\n"+
-                    "@Bloods_4L\n"+
-                    "@tiltmachinegun";
+    final static String END_TIMETABLE_MESSAGE = "\n" +
+            "Не ваше расписание?\n" +
+            "/mygroup - ваша группа\n" +
+            "/changegroup [номер_группы] - выбрать вашу группу\n\n" +
+            "Пожертвовать на хостинг можно на Сбер или ВТБ:\n" +
+            "+7 (910) 560-53-36";
+
     final static String HELP_TXT =
                     "Доступные команды:\n\n"+
 
-                    "\t/help - список доступных команд\n" +
-                    "\t/changegroup [номер_группы] (напр. /changegroup 71)- подписаться на уведомления по расписанию для вашей группы\n"+
+                    "\t/changegroup [номер_группы]\n(напр. /changegroup 71)- подписаться на уведомления по расписанию для вашей группы. ПРИ ПЕРВОМ ИСПОЛЬЗОВАНИИ БОТА ДЕЛАТЬ ОБЯЗАТЕЛЬНО\n"+
                     "\t/mygroup - узнать свою текущую группу\n"+
-                    "\t/myrole - узнать свою роль\n"+
-                    "\t/timetable - узнать расписание своей группы\n"+
-                    "\t/thanks - благодарности\n"+
+                    "\t/timetable - узнать расписание своей группы\n\n"+
+
+                    "Если есть желание поддержать разработку бота, то пожертвования на оплату хостинга можно скинуть на карту но номеру 89105605336 сбер\n\n" +
 
                     "При обнаружении багов, или если есть какие-либо пожелания, то пишите мне в тг:\n"+
                     "@Sasalomka";
@@ -87,9 +89,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "/help":
                     helpCommandReceived(chatId);
                     break;
-                case "/thanks":
-                    thanksCommandReceiver(chatId);
-                    break;
                 case "/changegroup":
                     if(messageText.length == 2) {
                         String stringGroupId = messageText[1];
@@ -103,41 +102,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "/mygroup":
                     myGroupCommandReceiver(update.getMessage().getChatId());
                     break;
-                case "/myrole":
-                    myRoleCommandReceiver(update.getMessage().getChatId());
-                    break;
                 case "/timetable":
                     timetableCommandReceiver(chatId);
-                    break;
-                case "/notice":
-                    if(getRole(update.getMessage().getChatId()) == 2) {
-                        //noticeCommandReceiver();
-                    } else{
-                        sendMessage(update.getMessage().getChatId(), "Недостаточно прав");
-                    }
-                    break;
-                case "/autonotice":
-                    autoNoticeCommandReceiver(chatId);
                     break;
                 case "/update":
                     checkNewTimetable();
                     break;
                 default:
                     sendMessage(chatId, "Простите, эта команда неправильна, или не поддерживается.");
-            }
-        }
-        else if(update.hasCallbackQuery()){
-            String[] str = update.getCallbackQuery().getData().split(" ");
-            int day = Integer.parseInt(str[0]);
-            int group = Integer.parseInt(str[1]);
-            SendMessage message = new SendMessage();
-            message.setText(findDefaultGroupTimetable(group, day));
-            message.setChatId(update.getCallbackQuery().getMessage().getChatId());
-
-            try{
-                execute(message);
-            }catch (TelegramApiException e){
-                e.printStackTrace();
             }
         }
     }
@@ -164,9 +136,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void startCommandReceived(long chatId, String name){
         String answer = "Привет, " + name + ", будем знакомы!\n" +
                 "Скоро ты сможешь смотреть расписание в нашем ЗАМЕЧАТЕЛЬНОМ КОЛЛЕДЖЕ\n\n" +
-                "P.S. ОБЯЗАТЕЛЬНО отправь /help, чтобы узнать больше о боте";
-
-        log.info("User " + name + " started work with bot");
+                "P.S. ОБЯЗАТЕЛЬНО отправь /help, чтобы узнать больше о боте, а еще не забудь выбрать группу, без этого бот работать не будет";
 
         sendMessage(chatId, answer);
     }
@@ -203,7 +173,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                 Optional<User> optionalUser = userRepository.findById(msg.getChatId());
 
                 User user = optionalUser.get();
-                int oldGroupId = user.getGroupId();
                 user.setGroupId(intGroupId);
 
                 userRepository.save(user);
@@ -214,91 +183,14 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
         sendMessage(msg.getChatId(), "Такой группы не найдено, проверьте корректность введенных данных");
     }
-    private void myRoleCommandReceiver(long chatId){
-
-        int role = getRole(chatId);
-
-        String text = "Ваша роль: ";
-
-        switch (role) {
-            case 0:
-                sendMessage(chatId, text + "бедолага");
-                break;
-            case 1:
-                sendMessage(chatId, text + "работяга");
-                break;
-            case 2:
-                sendMessage(chatId, text + "гигачад");
-                break;
-        }
-    }
     private void timetableCommandReceiver(long chatId){
 
         Optional<User> optionalUser = userRepository.findById(chatId);
         User user = optionalUser.get();
         int userGroup = user.getGroupId();
 
-//        InlineKeyboardButton monday = new InlineKeyboardButton();
-//        InlineKeyboardButton tuesday = new InlineKeyboardButton();
-//        InlineKeyboardButton wednesday = new InlineKeyboardButton();
-//        InlineKeyboardButton thursday = new InlineKeyboardButton();
-//        InlineKeyboardButton friday = new InlineKeyboardButton();
-//
-//        monday.setText("Понедельник");
-//        tuesday.setText("Вторник");
-//        wednesday.setText("Среда");
-//        thursday.setText("Четверг");
-//        friday.setText("Пятница");
-//
-//        monday.setCallbackData("1 " + userGroup);
-//        tuesday.setCallbackData("2 "+ userGroup);
-//        wednesday.setCallbackData("3 "+ userGroup);
-//        thursday.setCallbackData("4 "+ userGroup);
-//        friday.setCallbackData("5 "+ userGroup);
-//
-//        List<InlineKeyboardButton> row1 = new ArrayList<>();
-//        row1.add(monday);
-//        row1.add(tuesday);
-//        row1.add(wednesday);
-//
-//        List<InlineKeyboardButton> row2 = new ArrayList<>();
-//        row2.add(thursday);
-//        row2.add(friday);
-//
-//        List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
-//        rowList.add(row1);
-//        rowList.add(row2);
-//
-//        InlineKeyboardMarkup markup = new InlineKeyboardMarkup();
-//        markup.setKeyboard(rowList);
-//
-//        SendMessage message = new SendMessage();
-//        message.setChatId(chatId);
-//        message.setText("Выберите интересующий Вас день недели:                              ");
-//        message.setReplyMarkup(markup);
-//
-//        sendMessage(message);
+        sendMessage(chatId,findEditedGroupTimetable(userGroup) + END_TIMETABLE_MESSAGE);
 
-        sendMessage(chatId,findEditedGroupTimetable(userGroup));
-
-    }
-    private void autoNoticeCommandReceiver(long chatId){
-
-        Optional<User> optionalUser = userRepository.findById(chatId);
-        User user = optionalUser.get();
-        user.setNotice(!user.isNotice());
-
-        if(user.isNotice()){
-            sendMessage(chatId, "Вы подписались на уведомления");
-        }else{
-            sendMessage(chatId, "Вы отписались от уведомлений");
-        }
-
-        userRepository.save(user);
-
-    }
-    private void thanksCommandReceiver(long chatId){
-        sendMessage(chatId, SPECIAL_THANKS);
     }
 
     private void noticeCommandReceiver(){
@@ -315,12 +207,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             for (User user : users) {
                 if (user.getGroupId() == i && user.isNotice()) {
 
-                    sendMessage(user.getChatId(), date + ":\n\n" + timetable +
-                            "\n" +
-                            "Не ваше расписание?\n" +
-                            "/mygroup - ваша группа\n" +
-                            "/changegroup [номер_группы] - выбрать вашу группу");
-                    sendFile(user.getChatId(), new java.io.File("C:\\Users\\Sasalomka\\Documents\\GitHub\\Polytech_Timetable_Bot\\data\\actualTimetable.xls"));
+                    sendMessage(user.getChatId(), timetable + END_TIMETABLE_MESSAGE);
+                    sendFile(user.getChatId(), new java.io.File(oldPath));
                 }
             }
         }
@@ -334,7 +222,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             execute(message);
         }catch(TelegramApiException e){
-            log.error("Error occured: " + e.getMessage());
+
         }
     }
     private void sendMessage(SendMessage sendMessage){
@@ -355,55 +243,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             execute(sendDocument);
         }catch (TelegramApiException e){
             System.out.println(e.getMessage());
+            sendMessage(634876835, "ЧТО-ТО СЛОМАЛОСЬ!!! Отправка файла");
         }
-    }
-    private int getRole(long chatId){
-        Optional<User> optionalUser = userRepository.findById(chatId);
-        User user = optionalUser.get();
-
-        return user.getRole();
-    }
-    private String findDefaultGroupTimetable(int groupId, int day){
-
-        Map<Integer, String> groupTimetable = excelFileReader.getGroupTimetable(groupId, day);
-        String d = "";
-        switch (day){
-            case 1:
-                d = "Понедельник";
-                break;
-            case 2:
-                d = "Вторник";
-                break;
-            case 3:
-                d = "Среда";
-                break;
-            case 4:
-                d = "Четверг";
-                break;
-            case 5:
-                d = "Пятница";
-                break;
-            default:
-                d = "*ошибка*";
-        }
-        String answer = "Расписание на " + d + " для группы №" + groupId + ":\n\n";
-
-        for (int i = 1; i < 15; i++) {
-
-            if(groupTimetable.get(i) == null)
-                continue;
-
-            String[] lesionName = groupTimetable.get(i).split(",");
-
-            answer += i + " - ";
-            for(String str : lesionName){
-                str = str.trim();
-                str = str.replaceAll("\\s+", " ");
-                answer += str + " | ";
-            }
-            answer += "\n";
-        }
-        return answer;
     }
 
     public String findEditedGroupTimetable(int groupId){
@@ -464,8 +305,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void checkNewTimetable(){
-        sendMessage(634876835, "Проверка обновлений на сайте, пожалуйста подождите...");
-
         try{
             String path = SiteCommunication.downloadFile();
             if(!path.equals(oldPath)) {
@@ -476,7 +315,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     public void run() {
                         checkNewTimetable();
                     }
-                }, 32000000, 7200000);
+                }, 72000000 , 7200000);
                 oldPath = path;
 
                 System.out.println("Файл загружен");
@@ -484,9 +323,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                 noticeCommandReceiver();
             }
 
-            sendMessage(634876835, "Расписание обновлено");
         }catch (Exception e){
             e.printStackTrace();
+            sendMessage(634876835, "ЧТО-ТО СЛОМАЛОСЬ!!!");
         }
     }
 }
