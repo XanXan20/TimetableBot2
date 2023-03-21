@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 public class DocFileReader {
-    String filePath = "C:\\Users\\Sasalomka\\Downloads\\TimetableBot2\\data\\editedTimetable.docx";
+    String filePath = "/home/TimetableBot2/data/editedTimetable.docx";
     XWPFDocument doc;
     List<XWPFTable> tableList;
 

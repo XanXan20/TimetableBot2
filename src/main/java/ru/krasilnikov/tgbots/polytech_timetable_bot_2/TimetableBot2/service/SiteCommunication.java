@@ -12,7 +12,7 @@ import java.net.URL;
 
 //Это файл исключительно для Шабулина и постоянного ее расписания!
 public class SiteCommunication {
-    private static final String timetablesPath = "C:\\Users\\Sasalomka\\Downloads\\TimetableBot2\\data\\";
+    private static final String timetablesPath = "/home/TimetableBot2/data/";
     public static String downloadFile() throws IOException {
         Document site = Jsoup.connect("https://polytech-rzn.ru/?page_id=14410").get();
 

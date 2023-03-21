@@ -16,7 +16,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 public class XLSXFileReader {
-    private final String filePath = "C:\\Users\\Sasalomka\\Downloads\\TimetableBot2\\data\\actualTimetable.xlsx";
+    private final String filePath = "/home/TimetableBot2/data/actualTimetable.xlsx";
     private XSSFSheet sheet;
     private File file;
     private Map<Integer, Integer> groupIdToColumn;
